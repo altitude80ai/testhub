@@ -1,0 +1,1552 @@
+000100 IDENTIFICATION DIVISION.
+000200 PROGRAM-ID.          PPMGR215.
+000300*AUTHOR.             DDS TEAM.
+000400*          CENTERS FOR MEDICARE AND MEDICAID SERVICES
+000500******************************************************************
+000600*REMARKS.
+000700*   EFFECTIVE JAN 1, 2006  CONVERTED SOFTWARE TO CICS FORMAT.
+000800*
+000900*   FOR TESTING PRICER COBOL
+001000*            >  EXECUTE PPMGR___,PPOPN___,PPDRV___,PPCAL___
+001100*
+001200*   FOR CICS PRICER PROCESS
+001300*            >  YOU MUST HAVE YOUR OWN OPEN AND CLOSE PROGRAMS
+001400*            >  CAN NOT RUN PPMGR___ OR PPOPN___
+001500*            >  CICS DOES NOT ALLOW ANY OPEN OR CLOSE ECT...
+001600*            >  YOU NEED TO SET UP YOUR OWN INTERFACE FOR TESTING
+001700*
+001800*            THIS PROGRAM HAS BEEN CONVERTED TO COBOL II
+001900* MILLENNIUM STANDARDS
+002000*****        *******        ********        *******         ******
+002100*     THIS CHANGE  MUST BE DONE FOR VS/COBOL II
+002200*
+002300*  VS/COBOL II -
+002400*               TO COMPILE USING VS/COBOL II -
+002500*  1. BLOCK CONTAINS 133 RECORDS -  IN BOTH
+002600*               PRTOPER AND PRTCAPI FD'S
+002700*  2. CHANGE THE WRITE STATEMENTS TO AFTER ADVANCING
+002800*  3. CHANGE TO ADVANCING PAGE FROM ADVANCING 0
+002900*****        *******        ********        *******         ******
+003000*
+003100*     THIS CHANGE MUST BE DONE FOR VS/COBOL
+003200*
+003300*  VS/COBOL -
+003400*             TO COMPILE USING VS/COBOL -
+003500*  1. BLOCK CONTAINS 0 RECORDS -  IN BOTH
+003600*               PRTOPER AND PRTCAPI FD'S
+003700*  2. CHANGE THE WRITE STATEMENTS TO AFTER POSITIONING
+003800*  3. CHANGE TO POSITIONING 0 FROM POSITIONING PAGE
+003900******************************************************************
+004000*  FY 2021.5 PRICER
+004100*  PPMGR215, PPOPN215, PPDRV215, PPCAL215 EFFECTIVE 10/01/2020
+004200******************************************************************
+004300 DATE-COMPILED.
+004400 ENVIRONMENT                     DIVISION.
+004500
+004600 CONFIGURATION                   SECTION.
+004700 SOURCE-COMPUTER.                IBM-370.
+004800 OBJECT-COMPUTER.                IBM-370.
+004900
+005000 INPUT-OUTPUT SECTION.
+005100 FILE-CONTROL.
+005200
+005300     SELECT BILLFILE   ASSIGN TO UT-S-SYSUT1
+005400         FILE STATUS IS UT1-STAT.
+005500     SELECT PPSOUT     ASSIGN TO UT-S-SYSUT2
+005600         FILE STATUS IS UT2-STAT.
+005700     SELECT PRTOPER    ASSIGN TO UT-S-PRTOPER
+005800         FILE STATUS IS OPR-STAT.
+005900     SELECT PRTCAPI    ASSIGN TO UT-S-PRTCAPI
+006000         FILE STATUS IS CAP-STAT.
+006100
+006200 DATA DIVISION.
+006300 FILE SECTION.
+006400 FD  BILLFILE
+006500     LABEL RECORDS ARE STANDARD
+006600     RECORDING MODE IS F
+006700     BLOCK CONTAINS 0 RECORDS.
+006800 01  PPS-REC                     PIC X(536).
+006900
+007000 FD  PPSOUT
+007100     LABEL RECORDS ARE STANDARD
+007200     RECORDING MODE IS F
+007300     BLOCK CONTAINS 0 RECORDS.
+007400 01  OUT-REC                     PIC X(1897).
+007500
+007600 FD  PRTOPER
+007700     RECORDING MODE IS F
+007800     BLOCK CONTAINS 133 RECORDS
+007900     LABEL RECORDS ARE STANDARD.
+008000 01  PRTOPER-LINE                PIC X(133).
+008100
+008200 FD  PRTCAPI
+008300     RECORDING MODE IS F
+008400     BLOCK CONTAINS 133 RECORDS
+008500     LABEL RECORDS ARE STANDARD.
+008600 01  PRTCAPI-LINE                PIC X(133).
+008700
+008800 WORKING-STORAGE SECTION.
+008900 77  W-STORAGE-REF               PIC X(49)  VALUE
+009000     'P P M A N A G E R - W O R K I N G   S T O R A G E'.
+009100
+009200 01  PPMGR-VERSION               PIC X(05)  VALUE 'M21.5'.
+009300 01  PPOPN-VERSION               PIC X(05)  VALUE 'O21.5'.
+009400 01  PPDRV-VERSION               PIC X(05)  VALUE 'D21.5'.
+009500 01  PPOPN215                    PIC X(08)  VALUE 'PPOPN215'.
+009600 01  EOF-SW                      PIC 9(01)  VALUE 0.
+009700 01  X1                          PIC 9(05)  COMP SYNC VALUE 0.
+009800 01  X2                          PIC 9(05)  COMP SYNC VALUE 0.
+009900 01  X3                          PIC 9(05)  COMP SYNC VALUE 0.
+010000 01  X4                          PIC 9(05)  COMP SYNC VALUE 0.
+010100
+010200 01  OPERLINE-CTR                PIC 9(02)  VALUE 65.
+010300 01  CAPILINE-CTR                PIC 9(02)  VALUE 65.
+010400 01  BILLFILE-CTR                PIC 9(09)  VALUE 0.
+010500 01  PPSOUT-CTR                  PIC 9(09)  VALUE 0.
+010600
+010700 01  UT1-STAT.
+010800     05  UT1-STAT1               PIC X.
+010900     05  UT1-STAT2               PIC X.
+011000
+011100 01  UT2-STAT.
+011200     05  UT2-STAT1               PIC X.
+011300     05  UT2-STAT2               PIC X.
+011400
+011500 01  OPR-STAT.
+011600     05  OPR-STAT1               PIC X.
+011700     05  OPR-STAT2               PIC X.
+011800
+011900 01  CAP-STAT.
+012000     05  CAP-STAT1               PIC X.
+012100     05  CAP-STAT2               PIC X.
+012200
+012300************************************************************************
+012400* BILL RECORD FORMAT                                                   *
+012500*                                                                      *
+012600* BILL-CHARGES-CLAIMED = TOTAL COVERED CHARGES ON THE 0001 (TOTALS     *
+012700* LINE) MINUS BLOOD CLOT COST, KIDNEY COSTS, ACQUISITION COSTS, AND    *
+012800* TECHNICAL PROVIDER CHARGES.                                          *
+012900************************************************************************
+013000 01  BILL-WORK.
+013100     05  BILL-INPUT-DATA.
+013200         10  BILL-NPI-NUMBER.
+013300             15  BILL-NPI            PIC X(08).
+013400             15  BILL-NPI-FILLER     PIC X(02).
+013500         10  BILL-PROVIDER-NO        PIC X(06).
+013600         10  BILL-HI-CLAIM-NO        PIC X(12).
+013700         10  BILL-REVIEW-CODE        PIC 9(02).
+013800         10  BILL-DRG                PIC 9(03).
+013900         10  BILL-LOS                PIC 9(03).
+014000         10  BILL-COVERED-DAYS       PIC 9(03).
+014100         10  BILL-LTR-DAYS           PIC 9(02).
+014200         10  BILL-DISCHARGE-DATE.
+014300             15  D-CC                PIC 9(02).
+014400             15  D-YY                PIC 9(02).
+014500             15  D-MM                PIC 9(02).
+014600             15  D-DD                PIC 9(02).
+014700         10  BILL-CHARGES-CLAIMED    PIC 9(07)V9(02).
+014800         10  BILL-PRIN-PROC-CODE     PIC X(07).
+014900         10  BILL-OTHER-PROC-CODE1   PIC X(07).
+015000         10  BILL-OTHER-PROC-CODE2   PIC X(07).
+015100         10  BILL-OTHER-PROC-CODE3   PIC X(07).
+015200         10  BILL-OTHER-PROC-CODE4   PIC X(07).
+015300         10  BILL-OTHER-PROC-CODE5   PIC X(07).
+015400         10  BILL-OTHER-PROC-CODE6   PIC X(07).
+015500         10  BILL-OTHER-PROC-CODE7   PIC X(07).
+015600         10  BILL-OTHER-PROC-CODE8   PIC X(07).
+015700         10  BILL-OTHER-PROC-CODE9   PIC X(07).
+015800         10  BILL-OTHER-PROC-CODE10  PIC X(07).
+015900         10  BILL-OTHER-PROC-CODE11  PIC X(07).
+016000         10  BILL-OTHER-PROC-CODE12  PIC X(07).
+016100         10  BILL-OTHER-PROC-CODE13  PIC X(07).
+016200         10  BILL-OTHER-PROC-CODE14  PIC X(07).
+016300         10  BILL-OTHER-PROC-CODE15  PIC X(07).
+016400         10  BILL-OTHER-PROC-CODE16  PIC X(07).
+016500         10  BILL-OTHER-PROC-CODE17  PIC X(07).
+016600         10  BILL-OTHER-PROC-CODE18  PIC X(07).
+016700         10  BILL-OTHER-PROC-CODE19  PIC X(07).
+016800         10  BILL-OTHER-PROC-CODE20  PIC X(07).
+016900         10  BILL-OTHER-PROC-CODE21  PIC X(07).
+017000         10  BILL-OTHER-PROC-CODE22  PIC X(07).
+017100         10  BILL-OTHER-PROC-CODE23  PIC X(07).
+017200         10  BILL-OTHER-PROC-CODE24  PIC X(07).
+017300         10  BILL-OTHER-DIAG-CODE1  PIC X(07).
+017400         10  BILL-OTHER-DIAG-CODE2  PIC X(07).
+017500         10  BILL-OTHER-DIAG-CODE3  PIC X(07).
+017600         10  BILL-OTHER-DIAG-CODE4  PIC X(07).
+017700         10  BILL-OTHER-DIAG-CODE5  PIC X(07).
+017800         10  BILL-OTHER-DIAG-CODE6  PIC X(07).
+017900         10  BILL-OTHER-DIAG-CODE7  PIC X(07).
+018000         10  BILL-OTHER-DIAG-CODE8  PIC X(07).
+018100         10  BILL-OTHER-DIAG-CODE9  PIC X(07).
+018200         10  BILL-OTHER-DIAG-CODE10 PIC X(07).
+018300         10  BILL-OTHER-DIAG-CODE11 PIC X(07).
+018400         10  BILL-OTHER-DIAG-CODE12 PIC X(07).
+018500         10  BILL-OTHER-DIAG-CODE13 PIC X(07).
+018600         10  BILL-OTHER-DIAG-CODE14 PIC X(07).
+018700         10  BILL-OTHER-DIAG-CODE15 PIC X(07).
+018800         10  BILL-OTHER-DIAG-CODE16 PIC X(07).
+018900         10  BILL-OTHER-DIAG-CODE17 PIC X(07).
+019000         10  BILL-OTHER-DIAG-CODE18 PIC X(07).
+019100         10  BILL-OTHER-DIAG-CODE19 PIC X(07).
+019200         10  BILL-OTHER-DIAG-CODE20 PIC X(07).
+019300         10  BILL-OTHER-DIAG-CODE21 PIC X(07).
+019400         10  BILL-OTHER-DIAG-CODE22 PIC X(07).
+019500         10  BILL-OTHER-DIAG-CODE23 PIC X(07).
+019600         10  BILL-OTHER-DIAG-CODE24 PIC X(07).
+019700         10  BILL-OTHER-DIAG-CODE25 PIC X(07).
+019800         10  BILL-DEMO-DATA.
+019900             15  BILL-DEMO-CODE1        PIC X(02).
+020000             15  BILL-DEMO-CODE2        PIC X(02).
+020100             15  BILL-DEMO-CODE3        PIC X(02).
+020200             15  BILL-DEMO-CODE4        PIC X(02).
+020300         10  BILL-NDC-DATA.
+020400             15  BILL-NDC-NUMBER1       PIC X(11).
+020500             15  BILL-NDC-NUMBER2       PIC X(11).
+020600             15  BILL-NDC-NUMBER3       PIC X(11).
+020700             15  BILL-NDC-NUMBER4       PIC X(11).
+020800             15  BILL-NDC-NUMBER5       PIC X(11).
+020900             15  BILL-NDC-NUMBER6       PIC X(11).
+021000             15  BILL-NDC-NUMBER7       PIC X(11).
+021100             15  BILL-NDC-NUMBER8       PIC X(11).
+021200             15  BILL-NDC-NUMBER9       PIC X(11).
+021300             15  BILL-NDC-NUMBER10      PIC X(11).
+021400         10  BILL-COND-DATA.
+021500             15  BILL-COND-CODE1        PIC X(02).
+021600             15  BILL-COND-CODE2        PIC X(02).
+021700             15  BILL-COND-CODE3        PIC X(02).
+021800             15  BILL-COND-CODE4        PIC X(02).
+021900             15  BILL-COND-CODE5        PIC X(02).
+022000*************************************************************
+022100*******************************************************
+022200*    RETURNED BY PPOPN___                             *
+022300*******************************************************
+022400     05  PPS-DATA.
+022500         10  PPS-RTC               PIC 9(02).
+022600         10  PPS-WAGE-INDX         PIC 9(02)V9(04).
+022700         10  PPS-OUTLIER-DAYS      PIC 9(03).
+022800         10  PPS-AVG-LOS           PIC 9(02)V9(01).
+022900         10  PPS-DAYS-CUTOFF       PIC 9(02)V9(01).
+023000         10  PPS-OPER-IME-ADJ      PIC 9(06)V9(02).
+023100         10  PPS-TOTAL-PAYMENT     PIC 9(07)V9(02).
+023200         10  PPS-OPER-HSP-PART     PIC 9(06)V9(02).
+023300         10  PPS-OPER-FSP-PART     PIC 9(06)V9(02).
+023400         10  PPS-OPER-OUTLIER-PART PIC 9(07)V9(02).
+023500         10  PPS-REG-DAYS-USED     PIC 9(03).
+023600         10  PPS-LTR-DAYS-USED     PIC 9(02).
+023700         10  PPS-OPER-DSH-ADJ      PIC 9(06)V9(02).
+023800         10  PPS-CALC-VERS         PIC X(05).
+023900     05  FILLER                    PIC X(02).
+024000     05  PPS-ADDITIONAL-VARIABLES.
+024100         10  PPS-HSP-PCT                PIC 9(01)V9(02).
+024200         10  PPS-FSP-PCT                PIC 9(01)V9(02).
+024300         10  PPS-NAT-PCT                PIC 9(01)V9(02).
+024400         10  PPS-REG-PCT                PIC 9(01)V9(02).
+024500         10  PPS-CMI-ADJ-CPD            PIC 9(05)V9(02).
+024600         10  PPS-UPDATE-FACTOR          PIC 9(01)V9(05).
+024700         10  PPS-DRG-WT                 PIC 9(02)V9(04).
+024800         10  PPS-NAT-LABOR              PIC 9(05)V9(02).
+024900         10  PPS-NAT-NLABOR             PIC 9(05)V9(02).
+025000         10  PPS-REG-LABOR              PIC 9(05)V9(02).
+025100         10  PPS-REG-NLABOR             PIC 9(05)V9(02).
+025200         10  PPS-OPER-COLA              PIC 9(01)V9(03).
+025300         10  PPS-INTERN-RATIO           PIC 9(01)V9(04).
+025400         10  PPS-OPER-COST-OUTLIER      PIC 9(07)V9(09).
+025500         10  PPS-OPER-BILL-COSTS        PIC 9(07)V9(09).
+025600         10  PPS-OPER-DOLLAR-THRESHOLD  PIC 9(07)V9(09).
+025700         10  PPS-DSCHG-FRCTN            PIC 9(1)V9999.
+025800         10  PPS-DRG-WT-FRCTN           PIC 9(2)V9999.
+025900         10  PPS-CAPITAL-VARIABLES.
+026000             15  PPS-CAPI-TOTAL-PAY         PIC 9(07)V9(02).
+026100             15  PPS-CAPI-HSP               PIC 9(07)V9(02).
+026200             15  PPS-CAPI-FSP               PIC 9(07)V9(02).
+026300             15  PPS-CAPI-OUTLIER           PIC 9(07)V9(02).
+026400             15  PPS-CAPI-OLD-HARM          PIC 9(07)V9(02).
+026500             15  PPS-CAPI-DSH-ADJ           PIC 9(07)V9(02).
+026600             15  PPS-CAPI-IME-ADJ           PIC 9(07)V9(02).
+026700             15  PPS-CAPI-EXCEPTIONS        PIC 9(07)V9(02).
+026800         10  PPS-CAPITAL2-VARIABLES.
+026900             15  PPS-CAPI2-PAY-CODE         PIC X(1).
+027000             15  PPS-CAPI2-B-FSP            PIC 9(07)V9(02).
+027100             15  PPS-CAPI2-B-OUTLIER        PIC 9(07)V9(02).
+027200         10  PPS-OTHER-VARIABLES.
+027300             15  PPS-NON-TEMP-RELIEF-PAYMENT PIC 9(07)V9(02).
+027400             15  PPS-NEW-TECH-PAY-ADD-ON     PIC 9(07)V9(02).
+027500             15  PPS-ISLET-ISOL-PAY-ADD-ON   PIC 9(07)V9(02).
+027600             15  PPS-LOW-VOL-PAYMENT         PIC 9(07)V9(02).
+027700         10  PPS-HVBP-HRR-DATA.
+027800             15  PPS-VAL-BASED-PURCH-PARTIPNT PIC X.
+027900             15  PPS-VAL-BASED-PURCH-ADJUST   PIC 9V9(11).
+028000             15  PPS-HOSP-READMISS-REDUCTN    PIC X.
+028100             15  PPS-HOSP-HRR-ADJUSTMT        PIC 9V9(4).
+028200         10  PPS-OPERATNG-DATA.
+028300             15  PPS-MODEL1-BUNDLE-DISPRCNT  PIC V999.
+028400             15  PPS-OPER-BASE-DRG-PAY       PIC 9(08)V99.
+028500             15  PPS-OPER-HSP-AMT            PIC 9(08)V99.
+028600         10  PPS-PC-VARIABLES.
+028700             15  PPS-OPER-DSH                PIC 9(01)V9(04).
+028800             15  PPS-CAPI-DSH                PIC 9(01)V9(04).
+028900             15  PPS-CAPI-HSP-PCT            PIC 9(01)V9(02).
+029000             15  PPS-CAPI-FSP-PCT            PIC 9(01)V9(04).
+029100             15  PPS-ARITH-ALOS              PIC 9(02)V9(01).
+029200             15  PPS-PR-WAGE-INDEX           PIC 9(02)V9(04).
+029300             15  PPS-TRANSFER-ADJ            PIC 9(01)V9(04).
+029400             15  PPS-PC-HMO-FLAG             PIC X(01).
+029500             15  PPS-PC-COT-FLAG             PIC X(01).
+029600             15  PPS-OPER-HSP-PART2          PIC 9(07)V9(02).
+029700             15  PPS-BUNDLE-ADJUST-AMT       PIC S9(07)V99.
+029800         10  PPS-ADDITIONAL-PAY-INFO-DATA.
+029900             15  PPS-UNCOMP-CARE-AMOUNT         PIC S9(07)V9(02).
+030000             15  PPS-BUNDLE-ADJUST-AMT          PIC S9(07)V9(02).
+030100             15  PPS-VAL-BASED-PURCH-ADJUST-AMT PIC S9(07)V9(02).
+030200             15  PPS-READMIS-ADJUST-AMT         PIC S9(07)V9(02).
+030300         10  PPS-ADDITIONAL-PAY-INFO-DATA2.
+030400             15  PPS-HAC-PROG-REDUC-IND      PIC X.
+030500             15  PPS-EHR-PROG-REDUC-IND      PIC X.
+030600             15  PPS-EHR-ADJUST-AMT          PIC S9(07)V9(02).
+030700             15  PPS-STNDRD-VALUE            PIC S9(07)V9(02).
+030800             15  PPS-HAC-PAYMENT-AMT         PIC S9(07)V9(02).
+030900             15  PPS-FLX7-PAYMENT            PIC S9(07)V9(02).
+031000         10  PPS-FILLER                      PIC X(0897).
+031100*************************************************************
+031200
+031300*******************************************************
+031400* RETURNED BY PPOPN___                                *
+031500*******************************************************
+031600 COPY PPHOLDAR.
+031700
+031800************************************************************************
+031900* PASSED TO PPOPN___                                                   *
+032000*                                                                      *
+032100* B-CHARGES-CLAIMED = TOTAL COVERED CHARGES ON THE 0001 (TOTALS        *
+032200* LINE) MINUS BLOOD CLOT COST, KIDNEY COSTS, ACQUISITION COSTS, AND    *
+032300* TECHNICAL PROVIDER CHARGES.                                          *
+032400************************************************************************
+032500 01  BILL-DATA.
+032600     05  B-NPI-NUMBER.
+032700         10  B-NPI               PIC X(08).
+032800         10  B-NPI-FILLER        PIC X(02).
+032900     05  B-PROVIDER-NO.
+033000         10 B-PROVIDER-STATE     PIC X(02).
+033100         10 FILLER               PIC X(04).
+033200     05  B-REVIEW-CODE           PIC 9(02).
+033300     05  B-DRG                   PIC 9(03).
+033400     05  B-LOS                   PIC 9(03).
+033500     05  B-COVERED-DAYS          PIC 9(03).
+033600     05  B-LTR-DAYS              PIC 9(02).
+033700     05  B-DISCHARGE-DATE.
+033800         10  B-DISCHG-CC         PIC 9(02).
+033900         10  B-DISCHG-YY         PIC 9(02).
+034000         10  B-DISCHG-MM         PIC 9(02).
+034100         10  B-DISCHG-DD         PIC 9(02).
+034200     05  B-CHARGES-CLAIMED       PIC 9(07)V9(02).
+034300     05  B-PRIN-PROC-CODE        PIC X(07).
+034400     05  B-OTHER-PROC-CODE1      PIC X(07).
+034500     05  B-OTHER-PROC-CODE2      PIC X(07).
+034600     05  B-OTHER-PROC-CODE3      PIC X(07).
+034700     05  B-OTHER-PROC-CODE4      PIC X(07).
+034800     05  B-OTHER-PROC-CODE5      PIC X(07).
+034900     05  B-OTHER-PROC-CODE6      PIC X(07).
+035000     05  B-OTHER-PROC-CODE7      PIC X(07).
+035100     05  B-OTHER-PROC-CODE8      PIC X(07).
+035200     05  B-OTHER-PROC-CODE9      PIC X(07).
+035300     05  B-OTHER-PROC-CODE10     PIC X(07).
+035400     05  B-OTHER-PROC-CODE11     PIC X(07).
+035500     05  B-OTHER-PROC-CODE12     PIC X(07).
+035600     05  B-OTHER-PROC-CODE13     PIC X(07).
+035700     05  B-OTHER-PROC-CODE14     PIC X(07).
+035800     05  B-OTHER-PROC-CODE15     PIC X(07).
+035900     05  B-OTHER-PROC-CODE16     PIC X(07).
+036000     05  B-OTHER-PROC-CODE17     PIC X(07).
+036100     05  B-OTHER-PROC-CODE18     PIC X(07).
+036200     05  B-OTHER-PROC-CODE19     PIC X(07).
+036300     05  B-OTHER-PROC-CODE20     PIC X(07).
+036400     05  B-OTHER-PROC-CODE21     PIC X(07).
+036500     05  B-OTHER-PROC-CODE22     PIC X(07).
+036600     05  B-OTHER-PROC-CODE23     PIC X(07).
+036700     05  B-OTHER-PROC-CODE24     PIC X(07).
+036800     05  B-OTHER-DIAG-CODE1        PIC X(07).
+036900     05  B-OTHER-DIAG-CODE2        PIC X(07).
+037000     05  B-OTHER-DIAG-CODE3        PIC X(07).
+037100     05  B-OTHER-DIAG-CODE4        PIC X(07).
+037200     05  B-OTHER-DIAG-CODE5        PIC X(07).
+037300     05  B-OTHER-DIAG-CODE6        PIC X(07).
+037400     05  B-OTHER-DIAG-CODE7        PIC X(07).
+037500     05  B-OTHER-DIAG-CODE8        PIC X(07).
+037600     05  B-OTHER-DIAG-CODE9        PIC X(07).
+037700     05  B-OTHER-DIAG-CODE10       PIC X(07).
+037800     05  B-OTHER-DIAG-CODE11       PIC X(07).
+037900     05  B-OTHER-DIAG-CODE12       PIC X(07).
+038000     05  B-OTHER-DIAG-CODE13       PIC X(07).
+038100     05  B-OTHER-DIAG-CODE14       PIC X(07).
+038200     05  B-OTHER-DIAG-CODE15       PIC X(07).
+038300     05  B-OTHER-DIAG-CODE16       PIC X(07).
+038400     05  B-OTHER-DIAG-CODE17       PIC X(07).
+038500     05  B-OTHER-DIAG-CODE18       PIC X(07).
+038600     05  B-OTHER-DIAG-CODE19       PIC X(07).
+038700     05  B-OTHER-DIAG-CODE20       PIC X(07).
+038800     05  B-OTHER-DIAG-CODE21       PIC X(07).
+038900     05  B-OTHER-DIAG-CODE22       PIC X(07).
+039000     05  B-OTHER-DIAG-CODE23       PIC X(07).
+039100     05  B-OTHER-DIAG-CODE24       PIC X(07).
+039200     05  B-OTHER-DIAG-CODE25       PIC X(07).
+039300     05  B-DEMO-DATA.
+039400         10  B-DEMO-CODE1           PIC X(02).
+039500         10  B-DEMO-CODE2           PIC X(02).
+039600         10  B-DEMO-CODE3           PIC X(02).
+039700         10  B-DEMO-CODE4           PIC X(02).
+039800     05  B-NDC-DATA.
+039900         10  B-NDC-NUMBER1          PIC X(11).
+040000         10  B-NDC-NUMBER2          PIC X(11).
+040100         10  B-NDC-NUMBER3          PIC X(11).
+040200         10  B-NDC-NUMBER4          PIC X(11).
+040300         10  B-NDC-NUMBER5          PIC X(11).
+040400         10  B-NDC-NUMBER6          PIC X(11).
+040500         10  B-NDC-NUMBER7          PIC X(11).
+040600         10  B-NDC-NUMBER8          PIC X(11).
+040700         10  B-NDC-NUMBER9          PIC X(11).
+040800         10  B-NDC-NUMBER10         PIC X(11).
+040900     05  B-COND-DATA.
+041000         10  B-COND-CODE1           PIC X(02).
+041100         10  B-COND-CODE2           PIC X(02).
+041200         10  B-COND-CODE3           PIC X(02).
+041300         10  B-COND-CODE4           PIC X(02).
+041400         10  B-COND-CODE5           PIC X(02).
+041500
+041600*************************************************************
+041700
+041800
+041900*******************************************************
+042000*    PASSED TO PPOPN___                               *
+042100*******************************************************
+042200 01  PRICER-OPT-VERS-SW.
+042300     02  PRICER-OPTION-SW        PIC X.
+042400*    02  PPS-VERSIONS.
+042500*        10  PPOPN-VERSION       PIC X(05) VALUE 'O13.1'.
+042600
+042700*******************************************************
+042800*    CAN BE PASSED TO PPOPN___                        *
+042900*******************************************************
+043000 01  PROV-RECORD-FROM-USER       PIC X(310).
+043100
+043200*******************************************************
+043300*    CAN BE PASSED TO PPOPN___   4 POSITION MSA       *
+043400*******************************************************
+043500 01  MSAX-TABLE-FROM-USER.
+043600     05  FILLER                  PIC X(32000).
+043700     05  FILLER                  PIC X(30000).
+043800     05  FILLER                  PIC X(30000).
+043900
+044000*******************************************************
+044100*    CAN BE PASSED TO PPOPN___   5 POSITION CBSA      *
+044200*******************************************************
+044300 01  CBSA-TABLE-FROM-USER.
+044400     05  FILLER                  PIC X(32000).
+044500     05  FILLER                  PIC X(30000).
+044600     05  FILLER                  PIC X(30000).
+044700
+044800*******************************************************
+044900*    PROSPECTIVE PAYMENT REPORT COMPONENTS            *
+045000*******************************************************
+045100 01  PPS-DETAIL-LINE-OPER.
+045200     05  FILLER                  PIC X(01)  VALUE SPACES.
+045300     05  PRT-HIC                 PIC X(12).
+045400     05  FILLER                  PIC X(01)  VALUE SPACES.
+045500     05  PRT-PROV                PIC X(06).
+045600     05  FILLER                  PIC X(01)  VALUE SPACES.
+045700     05  PRT-WAGE-INDX           PIC 9.9999.
+045800     05  FILLER                  PIC X(01)  VALUE SPACES.
+045900     05  PRT-GRP-DRG             PIC 9(03).
+046000     05  FILLER                  PIC X(01)  VALUE SPACES.
+046100     05  PRT-ALOS                PIC Z9.9.
+046200     05  FILLER                  PIC X(01)  VALUE SPACES.
+046300     05  PRT-DAY-CUT             PIC Z9.
+046400     05  FILLER                  PIC X(01)  VALUE SPACES.
+046500     05  PRT-DISCHG-DATE         PIC 9(08).
+046600**   05  PRT-SLASH1              PIC X(01)  VALUE '/'.
+046700**   05  PRT-DISCHG-DD           PIC 9(02).
+046800**   05  PRT-SLASH2              PIC X(01)  VALUE '/'.
+046900**   05  PRT-DISCHG-YY           PIC 9(02).
+047000     05  FILLER                  PIC X(01)  VALUE SPACES.
+047100     05  PRT-TOT-PAY             PIC Z,ZZZ,ZZZ.99.
+047200     05  FILLER                  PIC X(01)  VALUE SPACES.
+047300     05  PRT-FSP-PART            PIC ZZZ,ZZZ.99.
+047400     05  FILLER                  PIC X(01)  VALUE SPACES.
+047500     05  PRT-HSP-PART            PIC ZZZ,ZZZ.99.
+047600     05  FILLER                  PIC X(01)  VALUE SPACES.
+047700     05  PRT-OUTLIER-PART        PIC Z,ZZZ,ZZZ.99.
+047800     05  PRT-DSH-ADJ             PIC ZZ,ZZZ.99.
+047900     05  PRT-INDTCH-ADJ          PIC ZZ,ZZZ.99.
+048000     05  FILLER                  PIC X(01)  VALUE SPACES.
+048100     05  PRT-LOS                 PIC ZZ9.
+048200     05  FILLER                  PIC X(02)  VALUE SPACES.
+048300     05  PRT-OUTLIER-DAYS        PIC ZZ9.
+048400     05  FILLER                  PIC X(02)  VALUE SPACES.
+048500     05  PRT-REV-CODE            PIC 99.
+048600     05  FILLER                  PIC X(03)  VALUE SPACES.
+048700     05  PRT-PPS-RTC             PIC 99.
+048800     05  FILLER                  PIC X(01)  VALUE SPACES.
+048900
+049000 01  PPS-HEAD1.
+049100     05  FILLER                  PIC X(01)  VALUE SPACES.
+049200     05  FILLER                  PIC X(44)  VALUE
+049300        '  C M S ,                                   '.
+049400     05  FILLER                  PIC X(44)  VALUE
+049500        '                                            '.
+049600     05  FILLER                  PIC X(44)  VALUE
+049700        '                                            '.
+049800
+049900 01  PPS-HEAD2-OPER.
+050000     05  FILLER                  PIC X(01)  VALUE SPACES.
+050100     05  FILLER                  PIC X(44)  VALUE
+050200        '  C M S     PRICER OPERATING  P R O S P E C '.
+050300     05  FILLER                  PIC X(44)  VALUE
+050400        'T I V E   P A Y M E N T   T E S T   D A T A '.
+050500     05  FILLER                  PIC X(44)  VALUE
+050600        '  R E P O R T  OPER215                      '.
+050700
+050800 01  PPS-HEAD3-OPER.
+050900     05  FILLER                  PIC X(01)  VALUE SPACES.
+051000     05  FILLER                  PIC X(44)  VALUE
+051100        ' HI CLAIM   PROVIDER WAGE  DRG GMN DRG DIS-D'.
+051200     05  FILLER                  PIC X(44)  VALUE
+051300        'ATE TOT OPERATING  FEDERAL     HOSPITAL     '.
+051400     05  FILLER                  PIC X(44)  VALUE
+051500        'OUTLIER  DISPROP   IMETCH     OUTL REV  PPS '.
+051600
+051700 01  PPS-HEAD4-OPER.
+051800     05  FILLER                  PIC X(01)  VALUE SPACES.
+051900     05  FILLER                  PIC X(44)  VALUE
+052000        '    NO         NO    INDEX  NO LOS CUT CCYYM'.
+052100     05  FILLER                  PIC X(44)  VALUE
+052200        'MDD & CAPITAL PAY  PORTION     PORTION      '.
+052300     05  FILLER                  PIC X(44)  VALUE
+052400        'PORTION   SHARE    ADJUST LOS DAYS  CD  RTC '.
+052500
+052600 01  PPS-HEAD2-CAPI.
+052700     05  FILLER                  PIC X(01)  VALUE SPACES.
+052800     05  FILLER                  PIC X(44)  VALUE
+052900        '  C M S     PRICER  CAPITAL   P R O S P E C '.
+053000     05  FILLER                  PIC X(44)  VALUE
+053100        'T I V E   P A Y M E N T   T E S T   D A T A '.
+053200     05  FILLER                  PIC X(44)  VALUE
+053300        '  R E P O R T  CAPI215                      '.
+053400
+053500 01  PPS-HEAD3-CAPI.
+053600     05  FILLER                  PIC X(01)  VALUE SPACES.
+053700     05  FILLER                  PIC X(44)  VALUE
+053800        ' HI CLAIM  PROVIDER /CAPITAL PAY/      HSP  '.
+053900     05  FILLER                  PIC X(44)  VALUE
+054000        '  /     FSP     /   OUTLIER   /  OLD-HARM   '.
+054100     05  FILLER                  PIC X(44)  VALUE
+054200        '/   DSH-ADJ   /   IME-ADJ   /  EXCEPTIONS  /'.
+054300
+054400*******************************************************
+054500*    CAPIITAL PROSPECTIVE PAYMENT REPORT COMPONENTS           *
+054600*******************************************************
+054700 01  PPS-DETAIL-LINE-CAPI.
+054800     05  FILLER                  PIC X(01)  VALUE SPACES.
+054900     05  PRT-CAPI-HIC            PIC X(12).
+055000     05  FILLER                  PIC X(01)  VALUE SPACES.
+055100     05  PRT-CAPI-PROV           PIC X(06).
+055200     05  FILLER                  PIC X(01)  VALUE SPACES.
+055300     05  PRT-CAPI-TOT-PAY        PIC Z,ZZZ,ZZZ.99.
+055400     05  FILLER                  PIC X(02)  VALUE SPACES.
+055500     05  PRT-CAPI-HSP            PIC Z,ZZZ,ZZZ.99.
+055600     05  FILLER                  PIC X(02)  VALUE SPACES.
+055700     05  PRT-CAPI-FSP            PIC Z,ZZZ,ZZZ.99.
+055800     05  FILLER                  PIC X(02)  VALUE SPACES.
+055900     05  PRT-CAPI-OUTLIER        PIC Z,ZZZ,ZZZ.99.
+056000     05  FILLER                  PIC X(02)  VALUE SPACES.
+056100     05  PRT-CAPI-OLD-HARM       PIC Z,ZZZ,ZZZ.99.
+056200     05  FILLER                  PIC X(02)  VALUE SPACES.
+056300     05  PRT-CAPI-DSH-ADJ        PIC Z,ZZZ,ZZZ.99.
+056400     05  FILLER                  PIC X(02)  VALUE SPACES.
+056500     05  PRT-CAPI-IME-ADJ        PIC Z,ZZZ,ZZZ.99.
+056600     05  FILLER                  PIC X(02)  VALUE SPACES.
+056700     05  PRT-CAPI-EXCEPTIONS     PIC Z,ZZZ,ZZZ.99.
+056800     05  FILLER                  PIC X(03)  VALUE SPACES.
+056900
+057000*******************************************************
+057100*    GROUPER TABLE COMPONENTS                         *
+057200*******************************************************
+057300 01  DRG-COUNTERS.
+057400     03  FILLER                  OCCURS 9.
+057500         05  FILLER                  OCCURS 580.
+057600             10  DRG-CNT             PIC 9(09) COMP.
+057700
+057800 01  MDC-COUNTERS.
+057900     03  FILLER                  OCCURS 9.
+058000         05  FILLER                  OCCURS 32.
+058100             10  MDC-CNT             PIC 9(09) COMP.
+058200
+058300 01  RTC-COUNTERS.
+058400     03  FILLER                  OCCURS 9.
+058500         05  FILLER                  OCCURS 10.
+058600             10  RTC-CNT             PIC 9(09) COMP.
+058700
+058800 01  TOTAL-COUNTERS.
+058900     03  FILLER                  OCCURS 37.
+059000         05  COUNT-TOTAL             PIC 9(09) COMP.
+059100
+059200 01  PRT-LINE.
+059300     05  FILLER                  PIC X(01)  VALUE SPACES.
+059400     05  PRT-LNE                 OCCURS 9.
+059500         10  PRT-XXX             PIC X(02).
+059600         10  PRT-DRG             PIC 9(03).
+059700         10  PRT-CNT             PIC Z(08)9B.
+059800         10  PRT-COL             PIC X(01).
+059900
+060000 01  PRT-HDG-OLD.
+060100     05  FILLER                  PIC X(01)  VALUE SPACES.
+060200     05  FILLER                  PIC X(44)  VALUE
+060300         '   ****** A L L   R E C O R D S ******      '.
+060400     05  FILLER                  PIC X(44)  VALUE
+060500         '    DISCHARGES OLDER THEN 5 YEARS           '.
+060600     05  FILLER                  PIC X(35)  VALUE
+060700        '                C M S ,            '.
+060800
+060900 01  PRT-HDG-V150.
+061000     05  FILLER                  PIC X(01)  VALUE SPACES.
+061100     05  FILLER                  PIC X(44)  VALUE
+061200         'G R O U P E R  V15.0  COUNTS BY   D R G     '.
+061300     05  FILLER                  PIC X(44)  VALUE
+061400         'FOR DISCHARGES ON OR AFTER 10/01/97         '.
+061500     05  FILLER                  PIC X(35)  VALUE
+061600        '                C M S ,            '.
+061700
+061800 01  PRT-HDG-V160.
+061900     05  FILLER                  PIC X(01)  VALUE SPACES.
+062000     05  FILLER                  PIC X(44)  VALUE
+062100         'G R O U P E R  V16.0  COUNTS BY   D R G     '.
+062200     05  FILLER                  PIC X(44)  VALUE
+062300         'FOR DISCHARGES ON OR AFTER 10/01/98         '.
+062400     05  FILLER                  PIC X(35)  VALUE
+062500        '                C M S ,            '.
+062600
+062700 01  PRT-HDG-V170.
+062800     05  FILLER                  PIC X(01)  VALUE SPACES.
+062900     05  FILLER                  PIC X(44)  VALUE
+063000         'G R O U P E R  V17.0  COUNTS BY   D R G     '.
+063100     05  FILLER                  PIC X(44)  VALUE
+063200         'FOR DISCHARGES ON OR AFTER 10/01/99         '.
+063300     05  FILLER                  PIC X(35)  VALUE
+063400        '                C M S ,            '.
+063500
+063600 01  PRT-HDG-V180.
+063700     05  FILLER                  PIC X(01)  VALUE SPACES.
+063800     05  FILLER                  PIC X(44)  VALUE
+063900         'G R O U P E R  V18.0  COUNTS BY   D R G     '.
+064000     05  FILLER                  PIC X(44)  VALUE
+064100         'FOR DISCHARGES ON OR AFTER 10/01/2000       '.
+064200     05  FILLER                  PIC X(35)  VALUE
+064300        '                C M S ,            '.
+064400
+064500
+064600 01  PRT-HDG-V190.
+064700     05  FILLER                  PIC X(01)  VALUE SPACES.
+064800     05  FILLER                  PIC X(44)  VALUE
+064900         'G R O U P E R  V19.0  COUNTS BY   D R G     '.
+065000     05  FILLER                  PIC X(44)  VALUE
+065100         'FOR DISCHARGES ON OR AFTER 10/01/2001       '.
+065200     05  FILLER                  PIC X(35)  VALUE
+065300        '                C M S ,            '.
+065400
+065500
+065600 01  PRT-HDG-V200.
+065700     05  FILLER                  PIC X(01)  VALUE SPACES.
+065800     05  FILLER                  PIC X(44)  VALUE
+065900         'G R O U P E R  V20.0  COUNTS BY   D R G     '.
+066000     05  FILLER                  PIC X(44)  VALUE
+066100         'FOR DISCHARGES ON OR AFTER 10/01/2002       '.
+066200     05  FILLER                  PIC X(35)  VALUE
+066300        '                C M S ,            '.
+066400
+066500 01  PRT-HDG-V210.
+066600     05  FILLER                  PIC X(01)  VALUE SPACES.
+066700     05  FILLER                  PIC X(44)  VALUE
+066800         'G R O U P E R  V21.0  COUNTS BY   D R G     '.
+066900     05  FILLER                  PIC X(44)  VALUE
+067000         'FOR DISCHARGES ON OR AFTER 10/01/2003       '.
+067100     05  FILLER                  PIC X(35)  VALUE
+067200        '                C M S ,            '.
+067300
+067400 01  PRT-HDG-V220.
+067500     05  FILLER                  PIC X(01)  VALUE SPACES.
+067600     05  FILLER                  PIC X(44)  VALUE
+067700         'G R O U P E R  V22.0  COUNTS BY   D R G     '.
+067800     05  FILLER                  PIC X(44)  VALUE
+067900         'FOR DISCHARGES ON OR AFTER 10/01/2004       '.
+068000     05  FILLER                  PIC X(35)  VALUE
+068100        '                C M S ,            '.
+068200
+068300 01  PRT-HDG-V230.
+068400     05  FILLER                  PIC X(01)  VALUE SPACES.
+068500     05  FILLER                  PIC X(44)  VALUE
+068600         'G R O U P E R  V23.0  COUNTS BY   D R G     '.
+068700     05  FILLER                  PIC X(44)  VALUE
+068800         'FOR DISCHARGES ON OR AFTER 10/01/2005       '.
+068900     05  FILLER                  PIC X(35)  VALUE
+069000        '                C M S ,            '.
+069100
+069200 01  PRT-HDG-V240.
+069300     05  FILLER                  PIC X(01)  VALUE SPACES.
+069400     05  FILLER                  PIC X(44)  VALUE
+069500         'G R O U P E R  V24.0  COUNTS BY   D R G     '.
+069600     05  FILLER                  PIC X(44)  VALUE
+069700         'FOR DISCHARGES ON OR AFTER 10/01/2006       '.
+069800     05  FILLER                  PIC X(35)  VALUE
+069900        '                C M S ,            '.
+070000
+070100 01  PRT-HDG-V250.
+070200     05  FILLER                  PIC X(01)  VALUE SPACES.
+070300     05  FILLER                  PIC X(44)  VALUE
+070400         'G R O U P E R  V24.0  COUNTS BY   D R G     '.
+070500     05  FILLER                  PIC X(44)  VALUE
+070600         'FOR DISCHARGES ON OR AFTER 10/01/2007       '.
+070700     05  FILLER                  PIC X(35)  VALUE
+070800        '                C M S ,            '.
+070900
+071000 01  PRT-HDG-V260.
+071100     05  FILLER                  PIC X(01)  VALUE SPACES.
+071200     05  FILLER                  PIC X(44)  VALUE
+071300         'G R O U P E R  V24.0  COUNTS BY   D R G     '.
+071400     05  FILLER                  PIC X(44)  VALUE
+071500         'FOR DISCHARGES ON OR AFTER 10/01/2008       '.
+071600     05  FILLER                  PIC X(35)  VALUE
+071700        '                C M S ,            '.
+071800
+071900 01  PRT-HDG-V270.
+072000     05  FILLER                  PIC X(01)  VALUE SPACES.
+072100     05  FILLER                  PIC X(44)  VALUE
+072200         'G R O U P E R  V24.0  COUNTS BY   D R G     '.
+072300     05  FILLER                  PIC X(44)  VALUE
+072400         'FOR DISCHARGES ON OR AFTER 10/01/2011       '.
+072500     05  FILLER                  PIC X(35)  VALUE
+072600        '                C M S ,            '.
+072700
+072800
+072900 01  PRT-HDG                     PIC X(132).
+073000
+073100 PROCEDURE DIVISION.
+073200
+073300 0000-MAINLINE  SECTION.
+073400     OPEN INPUT  BILLFILE.
+073500
+073600     OPEN OUTPUT PPSOUT.
+073700     OPEN OUTPUT PRTOPER.
+073800     OPEN OUTPUT PRTCAPI.
+073900
+074000     MOVE LOW-VALUES  TO DRG-COUNTERS.
+074100     MOVE LOW-VALUES  TO MDC-COUNTERS.
+074200     MOVE LOW-VALUES  TO RTC-COUNTERS.
+074300     MOVE LOW-VALUES  TO TOTAL-COUNTERS.
+074400*    MOVE ALL '0'     TO PPS-VERSIONS.
+074500
+074600     PERFORM 0100-PROCESS-RECORDS THRU 0100-EXIT UNTIL EOF-SW = 1.
+074700
+074800     DISPLAY '-- PROGRAM PPMGR___  VERSION ==> ' PPMGR-VERSION.
+074900     DISPLAY '-- PROGRAM PPOPN___  VERSION ==> ' PPOPN-VERSION.
+075000     DISPLAY '-- PROGRAM PPDRV___  VERSION ==> ' PPDRV-VERSION.
+075100
+075200     DISPLAY ' '.
+075300     IF COUNT-TOTAL (2) > 0
+075400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C87.1 '.
+075500     IF COUNT-TOTAL (3) > 0
+075600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C88.4 '.
+075700     IF COUNT-TOTAL (4) > 0
+075800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C89.4 '.
+075900     IF COUNT-TOTAL (5) > 0
+076000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C90.5 '.
+076100     IF COUNT-TOTAL (6) > 0
+076200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C91.5 '.
+076300     IF COUNT-TOTAL (7) > 0
+076400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C92.6 '.
+076500     IF COUNT-TOTAL (8) > 0
+076600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C93.5 '.
+076700     IF COUNT-TOTAL (9) > 0
+076800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C94.4 '.
+076900     IF COUNT-TOTAL (10) > 0
+077000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C95.4 '.
+077100     IF COUNT-TOTAL (11) > 0
+077200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C96.4 '.
+077300     IF COUNT-TOTAL (12) > 0
+077400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C97.4 '.
+077500     IF COUNT-TOTAL (13) > 0
+077600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C98.7 '.
+077700     IF COUNT-TOTAL (14) > 0
+077800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C99.8 '.
+077900     IF COUNT-TOTAL (15) > 0
+078000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C00.6 '.
+078100     IF COUNT-TOTAL (16) > 0
+078200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C01.7 '.
+078300     IF COUNT-TOTAL (17) > 0
+078400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C02.6 '.
+078500     IF COUNT-TOTAL (18) > 0
+078600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C03.8 '.
+078700     IF COUNT-TOTAL (19) > 0
+078800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C04.D '.
+078900     IF COUNT-TOTAL (20) > 0
+079000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C05.8 '.
+079100     IF COUNT-TOTAL (21) > 0
+079200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C06.9 '.
+079300     IF COUNT-TOTAL (22) > 0
+079400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C07.B '.
+079500     IF COUNT-TOTAL (23) > 0
+079600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C08.D '.
+079700     IF COUNT-TOTAL (24) > 0
+079800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C09.D '.
+079900     IF COUNT-TOTAL (25) > 0
+080000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C10.O '.
+080100     IF COUNT-TOTAL (26) > 0
+080200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C10.P '.
+080300     IF COUNT-TOTAL (27) > 0
+080400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C11.9 '.
+080500     IF COUNT-TOTAL (28) > 0
+080600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C12.5 '.
+080700     IF COUNT-TOTAL (29) > 0
+080800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C13.5 '.
+080900     IF COUNT-TOTAL (30) > 0
+081000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C14.B '.
+081100     IF COUNT-TOTAL (31) > 0
+081200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C15.6 '.
+081300     IF COUNT-TOTAL (32) > 0
+081400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C16.3 '.
+081500     IF COUNT-TOTAL (33) > 0
+081600       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C17.1 '.
+081700     IF COUNT-TOTAL (34) > 0
+081800       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C18.2 '.
+081900     IF COUNT-TOTAL (35) > 0
+082000       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C19.2 '.
+082100     IF COUNT-TOTAL (36) > 0
+082200       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C20.4 '.
+082300     IF COUNT-TOTAL (37) > 0
+082400       DISPLAY '-- PROGRAM PPCAL___  VERSION ==> C21.5 '.
+082500
+082600     DISPLAY ' '.
+082700     IF COUNT-TOTAL (1) > 0
+082800     DISPLAY '--   TOTAL OLD RECORDS   ====> ' COUNT-TOTAL (1).
+082900     IF COUNT-TOTAL (3) > 0
+083000     DISPLAY '-- FY 1988 RECORD COUNTS ====> ' COUNT-TOTAL (3).
+083100     IF COUNT-TOTAL (4) > 0
+083200     DISPLAY '-- FY 1989 RECORD COUNTS ====> ' COUNT-TOTAL (4).
+083300     IF COUNT-TOTAL (5) > 0
+083400     DISPLAY '-- FY 1990 RECORD COUNTS ====> ' COUNT-TOTAL (5).
+083500     IF COUNT-TOTAL (6) > 0
+083600     DISPLAY '-- FY 1991 RECORD COUNTS ====> ' COUNT-TOTAL (6).
+083700     IF COUNT-TOTAL (7) > 0
+083800     DISPLAY '-- FY 1992 RECORD COUNTS ====> ' COUNT-TOTAL (7).
+083900     IF COUNT-TOTAL (8) > 0
+084000     DISPLAY '-- FY 1993 RECORD COUNTS ====> ' COUNT-TOTAL (8).
+084100     IF COUNT-TOTAL (9) > 0
+084200     DISPLAY '-- FY 1994 RECORD COUNTS ====> ' COUNT-TOTAL (9).
+084300     IF COUNT-TOTAL (10) > 0
+084400     DISPLAY '-- FY 1995 RECORD COUNTS ====> ' COUNT-TOTAL (10).
+084500     IF COUNT-TOTAL (11) > 0
+084600     DISPLAY '-- FY 1996 RECORD COUNTS ====> ' COUNT-TOTAL (11).
+084700     IF COUNT-TOTAL (12) > 0
+084800     DISPLAY '-- FY 1997 RECORD COUNTS ====> ' COUNT-TOTAL (12).
+084900     IF COUNT-TOTAL (13) > 0
+085000     DISPLAY '-- FY 1998 RECORD COUNTS ====> ' COUNT-TOTAL (13).
+085100     IF COUNT-TOTAL (14) > 0
+085200     DISPLAY '-- FY 1999 RECORD COUNTS ====> ' COUNT-TOTAL (14).
+085300     IF COUNT-TOTAL (15) > 0
+085400     DISPLAY '-- FY 2000 RECORD COUNTS ====> ' COUNT-TOTAL (15).
+085500     IF COUNT-TOTAL (16) > 0
+085600     DISPLAY '-- FY 2001 RECORD COUNTS ====> ' COUNT-TOTAL (16).
+085700     IF COUNT-TOTAL (17) > 0
+085800     DISPLAY '-- FY 2002 RECORD COUNTS ====> ' COUNT-TOTAL (17).
+085900     IF COUNT-TOTAL (18) > 0
+086000     DISPLAY '-- FY 2003 RECORD COUNTS ====> ' COUNT-TOTAL (18).
+086100     IF COUNT-TOTAL (19) > 0
+086200     DISPLAY '-- FY 2004 RECORD COUNTS ====> ' COUNT-TOTAL (19).
+086300     IF COUNT-TOTAL (20) > 0
+086400     DISPLAY '-- FY 2005 RECORD COUNTS ====> ' COUNT-TOTAL (20).
+086500     IF COUNT-TOTAL (21) > 0
+086600     DISPLAY '-- FY 2006 RECORD COUNTS ====> ' COUNT-TOTAL (21).
+086700     IF COUNT-TOTAL (22) > 0
+086800     DISPLAY '-- FY 2007 RECORD COUNTS ====> ' COUNT-TOTAL (22).
+086900     IF COUNT-TOTAL (23) > 0
+087000     DISPLAY '-- FY 2008 RECORD COUNTS ====> ' COUNT-TOTAL (23).
+087100     IF COUNT-TOTAL (24) > 0
+087200     DISPLAY '-- FY 2009 RECORD COUNTS ====> ' COUNT-TOTAL (24).
+087300     IF COUNT-TOTAL (25) > 0
+087400     DISPLAY '-- FY 2010.O RECORD COUNTS ==> ' COUNT-TOTAL (25).
+087500     IF COUNT-TOTAL (26) > 0
+087600     DISPLAY '-- FY 2010.P RECORD COUNTS ==> ' COUNT-TOTAL (26).
+087700     IF COUNT-TOTAL (27) > 0
+087800     DISPLAY '-- FY 2011.9 RECORD COUNTS ==> ' COUNT-TOTAL (27).
+087900     IF COUNT-TOTAL (28) > 0
+088000     DISPLAY '-- FY 2012.5 RECORD COUNTS ==> ' COUNT-TOTAL (28).
+088100     IF COUNT-TOTAL (29) > 0
+088200     DISPLAY '-- FY 2013.5 RECORD COUNTS ==> ' COUNT-TOTAL (29).
+088300     IF COUNT-TOTAL (30) > 0
+088400     DISPLAY '-- FY 2014.B RECORD COUNTS ==> ' COUNT-TOTAL (30).
+088500     IF COUNT-TOTAL (31) > 0
+088600     DISPLAY '-- FY 2015.6 RECORD COUNTS ==> ' COUNT-TOTAL (31).
+088700     IF COUNT-TOTAL (32) > 0
+088800     DISPLAY '-- FY 2016.3 RECORD COUNTS ==> ' COUNT-TOTAL (32).
+088900     IF COUNT-TOTAL (33) > 0
+089000     DISPLAY '-- FY 2017.1 RECORD COUNTS ==> ' COUNT-TOTAL (33).
+089100     IF COUNT-TOTAL (34) > 0
+089200     DISPLAY '-- FY 2018.2 RECORD COUNTS ==> ' COUNT-TOTAL (34).
+089300     IF COUNT-TOTAL (35) > 0
+089400     DISPLAY '-- FY 2019.2 RECORD COUNTS ==> ' COUNT-TOTAL (35).
+089500     IF COUNT-TOTAL (36) > 0
+089600     DISPLAY '-- FY 2020.4 RECORD COUNTS ==> ' COUNT-TOTAL (36).
+089700     IF COUNT-TOTAL (37) > 0
+089800     DISPLAY '-- FY 2021.5 RECORD COUNTS ==> ' COUNT-TOTAL (37).
+089900
+090000     DISPLAY '                                 -----------'.
+090100
+090200     DISPLAY '-- INPUT  COUNTS FOR SYSUT1 ===> ' BILLFILE-CTR.
+090300     DISPLAY '-- OUTPUT COUNTS FOR SYSUT2 ===> ' PPSOUT-CTR.
+090400
+090500     CLOSE BILLFILE.
+090600     CLOSE PPSOUT.
+090700
+090800     CLOSE PRTOPER PRTCAPI.
+090900     STOP RUN.
+091000
+091100 0100-PROCESS-RECORDS.
+091200     READ BILLFILE INTO BILL-WORK
+091300         AT END
+091400             MOVE 1 TO EOF-SW.
+091500
+091600     MOVE BILL-PROVIDER-NO      TO B-PROVIDER-NO.
+091700     MOVE BILL-REVIEW-CODE      TO B-REVIEW-CODE.
+091800     MOVE BILL-DRG              TO B-DRG.
+091900     MOVE BILL-LOS              TO B-LOS.
+092000     MOVE BILL-COVERED-DAYS     TO B-COVERED-DAYS.
+092100     MOVE BILL-LTR-DAYS         TO B-LTR-DAYS.
+092200     MOVE BILL-DISCHARGE-DATE   TO B-DISCHARGE-DATE.
+092300     MOVE BILL-CHARGES-CLAIMED  TO B-CHARGES-CLAIMED.
+092400     MOVE BILL-PRIN-PROC-CODE   TO B-PRIN-PROC-CODE.
+092500     MOVE BILL-OTHER-PROC-CODE1 TO B-OTHER-PROC-CODE1.
+092600     MOVE BILL-OTHER-PROC-CODE2 TO B-OTHER-PROC-CODE2.
+092700     MOVE BILL-OTHER-PROC-CODE3 TO B-OTHER-PROC-CODE3.
+092800     MOVE BILL-OTHER-PROC-CODE4 TO B-OTHER-PROC-CODE4.
+092900     MOVE BILL-OTHER-PROC-CODE5 TO B-OTHER-PROC-CODE5.
+093000     MOVE BILL-OTHER-PROC-CODE6 TO B-OTHER-PROC-CODE6.
+093100     MOVE BILL-OTHER-PROC-CODE7 TO B-OTHER-PROC-CODE7.
+093200     MOVE BILL-OTHER-PROC-CODE8 TO B-OTHER-PROC-CODE8.
+093300     MOVE BILL-OTHER-PROC-CODE9 TO B-OTHER-PROC-CODE9.
+093400     MOVE BILL-OTHER-PROC-CODE11 TO B-OTHER-PROC-CODE11.
+093500     MOVE BILL-OTHER-PROC-CODE12 TO B-OTHER-PROC-CODE12.
+093600     MOVE BILL-OTHER-PROC-CODE13 TO B-OTHER-PROC-CODE13.
+093700     MOVE BILL-OTHER-PROC-CODE14 TO B-OTHER-PROC-CODE14.
+093800     MOVE BILL-OTHER-PROC-CODE15 TO B-OTHER-PROC-CODE15.
+093900     MOVE BILL-OTHER-PROC-CODE16 TO B-OTHER-PROC-CODE16.
+094000     MOVE BILL-OTHER-PROC-CODE17 TO B-OTHER-PROC-CODE17.
+094100     MOVE BILL-OTHER-PROC-CODE18 TO B-OTHER-PROC-CODE18.
+094200     MOVE BILL-OTHER-PROC-CODE19 TO B-OTHER-PROC-CODE19.
+094300     MOVE BILL-OTHER-PROC-CODE20 TO B-OTHER-PROC-CODE20.
+094400     MOVE BILL-OTHER-PROC-CODE21 TO B-OTHER-PROC-CODE21.
+094500     MOVE BILL-OTHER-PROC-CODE22 TO B-OTHER-PROC-CODE22.
+094600     MOVE BILL-OTHER-PROC-CODE23 TO B-OTHER-PROC-CODE23.
+094700     MOVE BILL-OTHER-PROC-CODE24 TO B-OTHER-PROC-CODE24.
+094800     MOVE BILL-OTHER-DIAG-CODE1 TO B-OTHER-DIAG-CODE1.
+094900     MOVE BILL-OTHER-DIAG-CODE2 TO B-OTHER-DIAG-CODE2.
+095000     MOVE BILL-OTHER-DIAG-CODE3 TO B-OTHER-DIAG-CODE3.
+095100     MOVE BILL-OTHER-DIAG-CODE4 TO B-OTHER-DIAG-CODE4.
+095200     MOVE BILL-OTHER-DIAG-CODE5 TO B-OTHER-DIAG-CODE5.
+095300     MOVE BILL-OTHER-DIAG-CODE6 TO B-OTHER-DIAG-CODE6.
+095400     MOVE BILL-OTHER-DIAG-CODE7 TO B-OTHER-DIAG-CODE7.
+095500     MOVE BILL-OTHER-DIAG-CODE8 TO B-OTHER-DIAG-CODE8.
+095600     MOVE BILL-OTHER-DIAG-CODE9 TO B-OTHER-DIAG-CODE9.
+095700     MOVE BILL-OTHER-DIAG-CODE10 TO B-OTHER-DIAG-CODE10.
+095800     MOVE BILL-OTHER-DIAG-CODE11 TO B-OTHER-DIAG-CODE11.
+095900     MOVE BILL-OTHER-DIAG-CODE12 TO B-OTHER-DIAG-CODE12.
+096000     MOVE BILL-OTHER-DIAG-CODE13 TO B-OTHER-DIAG-CODE13.
+096100     MOVE BILL-OTHER-DIAG-CODE14 TO B-OTHER-DIAG-CODE14.
+096200     MOVE BILL-OTHER-DIAG-CODE15 TO B-OTHER-DIAG-CODE15.
+096300     MOVE BILL-OTHER-DIAG-CODE16 TO B-OTHER-DIAG-CODE16.
+096400     MOVE BILL-OTHER-DIAG-CODE17 TO B-OTHER-DIAG-CODE17.
+096500     MOVE BILL-OTHER-DIAG-CODE18 TO B-OTHER-DIAG-CODE18.
+096600     MOVE BILL-OTHER-DIAG-CODE19 TO B-OTHER-DIAG-CODE19.
+096700     MOVE BILL-OTHER-DIAG-CODE20 TO B-OTHER-DIAG-CODE20.
+096800     MOVE BILL-OTHER-DIAG-CODE21 TO B-OTHER-DIAG-CODE21.
+096900     MOVE BILL-OTHER-DIAG-CODE22 TO B-OTHER-DIAG-CODE22.
+097000     MOVE BILL-OTHER-DIAG-CODE23 TO B-OTHER-DIAG-CODE23.
+097100     MOVE BILL-OTHER-DIAG-CODE24 TO B-OTHER-DIAG-CODE24.
+097200     MOVE BILL-OTHER-DIAG-CODE25 TO B-OTHER-DIAG-CODE25.
+097300     MOVE BILL-DEMO-CODE1        TO B-DEMO-CODE1.
+097400     MOVE BILL-DEMO-CODE2        TO B-DEMO-CODE2.
+097500     MOVE BILL-DEMO-CODE3        TO B-DEMO-CODE3.
+097600     MOVE BILL-DEMO-CODE4        TO B-DEMO-CODE4.
+097700     MOVE BILL-NDC-NUMBER1       TO B-NDC-NUMBER1.
+097800     MOVE BILL-NDC-NUMBER2       TO B-NDC-NUMBER2.
+097900     MOVE BILL-NDC-NUMBER3       TO B-NDC-NUMBER3.
+098000     MOVE BILL-NDC-NUMBER4       TO B-NDC-NUMBER4.
+098100     MOVE BILL-NDC-NUMBER5       TO B-NDC-NUMBER5.
+098200     MOVE BILL-NDC-NUMBER6       TO B-NDC-NUMBER6.
+098300     MOVE BILL-NDC-NUMBER7       TO B-NDC-NUMBER7.
+098400     MOVE BILL-NDC-NUMBER8       TO B-NDC-NUMBER8.
+098500     MOVE BILL-NDC-NUMBER9       TO B-NDC-NUMBER9.
+098600     MOVE BILL-NDC-NUMBER10      TO B-NDC-NUMBER10.
+098700     MOVE BILL-COND-CODE1        TO B-COND-CODE1.
+098800     MOVE BILL-COND-CODE2        TO B-COND-CODE2.
+098900     MOVE BILL-COND-CODE3        TO B-COND-CODE3.
+099000     MOVE BILL-COND-CODE4        TO B-COND-CODE4.
+099100     MOVE BILL-COND-CODE5        TO B-COND-CODE5.
+099200
+099300     IF  EOF-SW = 0
+099400         ADD 1 TO BILLFILE-CTR
+099500
+099600*    DISPLAY '-- INPUT  COUNTS FOR SYSUT1 ===> ' BILLFILE-CTR
+099700*    DISPLAY '-- BILL PROVIDER NO         ===> ' BILL-PROVIDER-NO
+099800
+099900         PERFORM 0200-APPLY-DRG THRU 0200-EXIT
+100000         PERFORM 1000-CALC-PAYMENT THRU 1000-EXIT
+100100         PERFORM 1100-WRITE-SYSUT2 THRU 1100-EXIT.
+100200
+100300 0100-EXIT.  EXIT.
+100400
+100500 0200-APPLY-DRG.
+100600***********************************************************
+100700*   THIS PROGRAM NO LONGER CALLS THE GROUPERS             *
+100800*   TO RETRIEVE THE DRGS. THE TEST BILL DATA HAS BEEN     *
+100900*   CHANGED TO CARRY THE DRGS. IF YOU WERE TO CALL        *
+101000*   HSI GROUPER SUBROUTINES -- USE                        *
+101100* PPCAL993  -                                             *
+101200*   DISCHARGE DATES AFTER 09/30/98 USE  GROUPER VERS 16.0 *
+101300* PPCAL001  -                                             *
+101400*   DISCHARGE DATES AFTER 09/30/99 USE  GROUPER VERS 17.0 *
+101500* PPCAL012  -                                             *
+101600*   DISCHARGE DATES AFTER 09/30/00 USE  GROUPER VERS 18.0 *
+101700*      WITH APR 1, 2001 CHANGES FOR BIPA                  *
+101800* PPCAL020  -                                             *
+101900*   DISCHARGE DATES AFTER 09/30/01 USE  GROUPER VERS 19.0 *
+102000* PPCAL033  -                                             *
+102100*   DISCHARGE DATES AFTER 09/30/02 USE  GROUPER VERS 20.0 *
+102200* PPCAL048  -                                             *
+102300*   DISCHARGE DATES AFTER 09/30/03 USE  GROUPER VERS 21.0 *
+102400* PPCAL052  -                                             *
+102500*   DISCHARGE DATES AFTER 09/30/04 USE  GROUPER VERS 22.0 *
+102600* PPCAL063  -                                             *
+102700*   DISCHARGE DATES AFTER 09/30/05 USE  GROUPER VERS 23.0 *
+102800* PPCAL063  - CORRECTED DRG 233                           *
+102900*   DISCHARGE DATES AFTER 09/30/05 USE  GROUPER VERS 23.0 *
+103000* PPCAL063  -  CONVERTED TO CICS ON 01/01/2006            *
+103100*           NO LOGIC  CHANGES OTHER THEN CICS CONVERSION  *
+103200*   DISCHARGE DATES AFTER 09/30/05 USE  GROUPER VERS 23.0 *
+103300* PPCAL063  -                                             *
+103400*           LOGIC CHANGES TO DSH AND 401 HOSPITAL 150051  *
+103500*   DISCHARGE DATES AFTER 09/30/05 USE  GROUPER VERS 23.0 *
+103600* PPCAL074  -                                             *
+103700*   DISCHARGE DATES AFTER 09/30/06 USE  GROUPER VERS 24.0 *
+103800***********************************************************
+103900*******************************************************
+104000****  OLD RECORDS
+104100****       FY - -PPCAL870
+104200*******************************************************
+104300     IF BILL-DISCHARGE-DATE < 19871001
+104400        MOVE 2 TO X4
+104500        ADD 1             TO COUNT-TOTAL (X4)
+104600     ELSE
+104700
+104800*******************************************************
+104900****  AFTER 09/30/88 - GROUPER 20.0 IS FOR ALL VERSIONS
+105000****       FY - -PPCAL880
+105100*******************************************************
+105200     IF BILL-DISCHARGE-DATE < 19881001
+105300        MOVE 3 TO X4
+105400        ADD 1             TO COUNT-TOTAL (X4)
+105500     ELSE
+105600
+105700*******************************************************
+105800****  AFTER 09/30/89 - GROUPER 20.0 IS FOR ALL VERSIONS
+105900****       FY - -PPCAL891
+106000*******************************************************
+106100     IF BILL-DISCHARGE-DATE < 19891001
+106200        MOVE 4 TO X4
+106300        ADD 1             TO COUNT-TOTAL (X4)
+106400     ELSE
+106500
+106600*******************************************************
+106700****       FY - -PPCAL900
+106800*******************************************************
+106900     IF BILL-DISCHARGE-DATE < 19901001
+107000        MOVE 5 TO X4
+107100        ADD 1             TO COUNT-TOTAL (X4)
+107200     ELSE
+107300
+107400*******************************************************
+107500****       FY - -PPCA0910
+107600*******************************************************
+107700     IF BILL-DISCHARGE-DATE < 19911001
+107800        MOVE 6 TO X4
+107900        ADD 1             TO COUNT-TOTAL (X4)
+108000     ELSE
+108100
+108200*******************************************************
+108300****       FY - -PPCAL920
+108400*******************************************************
+108500     IF BILL-DISCHARGE-DATE < 19921001
+108600        MOVE 7 TO X4
+108700        ADD 1             TO COUNT-TOTAL (X4)
+108800     ELSE
+108900
+109000*******************************************************
+109100****       FY - -PPCAL930
+109200*******************************************************
+109300     IF BILL-DISCHARGE-DATE < 19931001
+109400        MOVE 8 TO X4
+109500        ADD 1             TO COUNT-TOTAL (X4)
+109600     ELSE
+109700
+109800*******************************************************
+109900****       FY - -PPCAL940
+110000*******************************************************
+110100     IF BILL-DISCHARGE-DATE < 19941001
+110200        MOVE 9 TO X4
+110300        ADD 1             TO COUNT-TOTAL (X4)
+110400     ELSE
+110500
+110600*******************************************************
+110700****       FY - -PPCAL950
+110800*******************************************************
+110900     IF BILL-DISCHARGE-DATE < 19951001
+111000        MOVE 10 TO X4
+111100        ADD 1             TO COUNT-TOTAL (X4)
+111200     ELSE
+111300
+111400*******************************************************
+111500****       FY - -PPCAL960
+111600*******************************************************
+111700     IF BILL-DISCHARGE-DATE < 19961001
+111800        MOVE 11 TO X4
+111900        ADD 1             TO COUNT-TOTAL (X4)
+112000     ELSE
+112100
+112200*******************************************************
+112300****       FY - -PPCAL970
+112400*******************************************************
+112500     IF BILL-DISCHARGE-DATE < 19971001
+112600        MOVE 12 TO X4
+112700        ADD 1             TO COUNT-TOTAL (X4)
+112800     ELSE
+112900
+113000*******************************************************
+113100****       FY - -PPCAL980
+113200*******************************************************
+113300     IF BILL-DISCHARGE-DATE < 19981001
+113400        MOVE 13 TO X4
+113500        ADD 1             TO COUNT-TOTAL (X4)
+113600     ELSE
+113700
+113800*******************************************************
+113900****       FY - -PPCAL990
+114000*******************************************************
+114100     IF BILL-DISCHARGE-DATE < 19991001
+114200        MOVE 14 TO X4
+114300        ADD 1             TO COUNT-TOTAL (X4)
+114400     ELSE
+114500
+114600*******************************************************
+114700****       FY - -PPCAL000
+114800*******************************************************
+114900     IF BILL-DISCHARGE-DATE < 20001001
+115000        MOVE 15 TO X4
+115100        ADD 1             TO COUNT-TOTAL (X4)
+115200     ELSE
+115300
+115400*******************************************************
+115500****       FY - -PPCAL010
+115600*******************************************************
+115700     IF BILL-DISCHARGE-DATE < 20011001
+115800        MOVE 16 TO X4
+115900        ADD 1             TO COUNT-TOTAL (X4)
+116000     ELSE
+116100
+116200*******************************************************
+116300****       FY - -PPCAL020
+116400*******************************************************
+116500     IF BILL-DISCHARGE-DATE < 20021001
+116600        MOVE 17                            TO X4
+116700*       ADD 1             TO DRG-CNT (X4 B-DRG)
+116800        ADD 1             TO COUNT-TOTAL (X4)
+116900     ELSE
+117000
+117100*******************************************************
+117200****       FY - -PPCAL030
+117300*******************************************************
+117400     IF BILL-DISCHARGE-DATE < 20031001
+117500        MOVE 18 TO X4
+117600*       ADD 1             TO DRG-CNT (X4 B-DRG)
+117700        ADD 1             TO COUNT-TOTAL (X4)
+117800     ELSE
+117900
+118000*******************************************************
+118100****       FY - -PPCAL040
+118200*******************************************************
+118300     IF BILL-DISCHARGE-DATE < 20041001
+118400        MOVE 19 TO X4
+118500*       ADD 1             TO DRG-CNT (X4 B-DRG)
+118600        ADD 1             TO COUNT-TOTAL (X4)
+118700     ELSE
+118800
+118900*******************************************************
+119000****       FY - -PPCAL050
+119100*******************************************************
+119200     IF BILL-DISCHARGE-DATE < 20051001
+119300        MOVE 20 TO X4
+119400*       ADD 1             TO DRG-CNT (X4 B-DRG)
+119500        ADD 1             TO COUNT-TOTAL (X4)
+119600     ELSE
+119700
+119800*******************************************************
+119900****       FY - -PPCAL060
+120000*******************************************************
+120100     IF BILL-DISCHARGE-DATE < 20061001
+120200        MOVE 21 TO X4
+120300*       ADD 1             TO DRG-CNT (X4 B-DRG)
+120400        ADD 1             TO COUNT-TOTAL (X4)
+120500     ELSE
+120600
+120700*******************************************************
+120800****       FY - -PPCAL070
+120900*******************************************************
+121000     IF BILL-DISCHARGE-DATE < 20071001
+121100        MOVE 22 TO X4
+121200*       ADD 1             TO DRG-CNT (X4 B-DRG)
+121300        ADD 1             TO COUNT-TOTAL (X4)
+121400     ELSE
+121500
+121600*******************************************************
+121700****       FY - -PPCAL080
+121800*******************************************************
+121900     IF BILL-DISCHARGE-DATE < 20081001
+122000        MOVE 23 TO X4
+122100*       ADD 1             TO DRG-CNT (X4 B-DRG)
+122200        ADD 1             TO COUNT-TOTAL (X4)
+122300     ELSE
+122400
+122500*******************************************************
+122600*******************************************************
+122700****       FY - -PPCAL090
+122800*******************************************************
+122900     IF BILL-DISCHARGE-DATE < 20091001
+123000        MOVE 24 TO X4
+123100*       ADD 1             TO DRG-CNT (X4 B-DRG)
+123200        ADD 1             TO COUNT-TOTAL (X4)
+123300     ELSE
+123400
+123500*******************************************************
+123600****       FY - -PPCAL10A
+123700*******************************************************
+123800     IF BILL-DISCHARGE-DATE < 20100401
+123900        MOVE 25 TO X4
+124000*       ADD 1             TO DRG-CNT (X4 B-DRG)
+124100        ADD 1             TO COUNT-TOTAL (X4)
+124200     ELSE
+124300
+124400*******************************************************
+124500*******************************************************
+124600****       FY - -PPCAL10B
+124700*******************************************************
+124800     IF BILL-DISCHARGE-DATE < 20101001
+124900        MOVE 26 TO X4
+125000*       ADD 1             TO DRG-CNT (X4 B-DRG)
+125100        ADD 1             TO COUNT-TOTAL (X4)
+125200     ELSE
+125300
+125400*******************************************************
+125500****       FY - -PPCAL110
+125600*******************************************************
+125700     IF BILL-DISCHARGE-DATE < 20111001
+125800        MOVE 27 TO X4
+125900*       ADD 1             TO DRG-CNT (X4 B-DRG)
+126000        ADD 1             TO COUNT-TOTAL (X4)
+126100     ELSE
+126200
+126300*******************************************************
+126400****       FY - -PPCAL120
+126500*******************************************************
+126600     IF BILL-DISCHARGE-DATE < 20121001
+126700        MOVE 28 TO X4
+126800*       ADD 1             TO DRG-CNT (X4 B-DRG)
+126900        ADD 1             TO COUNT-TOTAL (X4)
+127000     ELSE
+127100
+127200*******************************************************
+127300****       FY - -PPCAL134
+127400*******************************************************
+127500     IF BILL-DISCHARGE-DATE < 20131001
+127600        MOVE 29 TO X4
+127700*       ADD 1             TO DRG-CNT (X4 B-DRG)
+127800        ADD 1             TO COUNT-TOTAL (X4)
+127900     ELSE
+128000
+128100*******************************************************
+128200*******************************************************
+128300****       FY - -PPCAL149
+128400*******************************************************
+128500     IF BILL-DISCHARGE-DATE < 20141001
+128600        MOVE 30 TO X4
+128700*       ADD 1             TO DRG-CNT (X4 B-DRG)
+128800        ADD 1             TO COUNT-TOTAL (X4)
+128900     ELSE
+129000
+129100*******************************************************
+129200*******************************************************
+129300****       FY - -PPCAL155
+129400*******************************************************
+129500     IF BILL-DISCHARGE-DATE < 20151001
+129600        MOVE 31 TO X4
+129700*       ADD 1             TO DRG-CNT (X4 B-DRG)
+129800        ADD 1             TO COUNT-TOTAL (X4)
+129900     ELSE
+130000
+130100*******************************************************
+130200*******************************************************
+130300****       FY - -PPCAL162
+130400*******************************************************
+130500     IF BILL-DISCHARGE-DATE < 20161001
+130600        MOVE 32 TO X4
+130700*       ADD 1             TO DRG-CNT (X4 B-DRG)
+130800        ADD 1             TO COUNT-TOTAL (X4)
+130900     ELSE
+131000
+131100*******************************************************
+131200****       FY - -PPCAL171
+131300*******************************************************
+131400     IF BILL-DISCHARGE-DATE < 20171001
+131500        MOVE 33 TO X4
+131600*       ADD 1             TO DRG-CNT (X4 B-DRG)
+131700        ADD 1             TO COUNT-TOTAL (X4).
+131800
+131900*******************************************************
+132000*******************************************************
+132100****       FY - -PPCAL182
+132200*******************************************************
+132300     IF BILL-DISCHARGE-DATE < 20181001
+132400        MOVE 34 TO X4
+132500*       ADD 1             TO DRG-CNT (X4 B-DRG)
+132600        ADD 1             TO COUNT-TOTAL (X4).
+132700
+132800*******************************************************
+132900*******************************************************
+133000****       FY - -PPCAL192
+133100*******************************************************
+133200     IF BILL-DISCHARGE-DATE < 20191001
+133300        MOVE 35 TO X4
+133400*       ADD 1             TO DRG-CNT (X4 B-DRG)
+133500        ADD 1             TO COUNT-TOTAL (X4).
+133600
+133700*******************************************************
+133800*******************************************************
+133900****       FY - -PPCAL204
+134000*******************************************************
+134100     IF BILL-DISCHARGE-DATE < 20201001
+134200        MOVE 36 TO X4
+134300*       ADD 1             TO DRG-CNT (X4 B-DRG)
+134400        ADD 1             TO COUNT-TOTAL (X4).
+134500
+134600*******************************************************
+134700*******************************************************
+134800****       FY - -PPCAL215
+134900*******************************************************
+135000        MOVE 37 TO X4
+135100*       ADD 1             TO DRG-CNT (X4 B-DRG)
+135200        ADD 1             TO COUNT-TOTAL (X4).
+135300
+135400*******************************************************
+135500*******************************************************
+135600 0200-EXIT.  EXIT.
+135700
+135800
+135900 1000-CALC-PAYMENT.
+136000*******************************************************
+136100*    CALL TO THE PPS SUBROUTINE TO CALCULATE THE      *
+136200*    PAYMENT                                          *
+136300*******************************************************
+136400***************************************************************
+136500* OPTION (1)                                                  *
+136600*       (1)  MOVE ' ' TO PRICER-OPTION-SW.                    *
+136700*            CALL 'PPOPN___' USING BILL-DATA                  *
+136800*                                  PPS-DATA                   *
+136900*                                  PRICER-OPT-VERS-SW.        *
+137000*        THIS PASSES THE STANDARD VARIABLES USED FOR PRICING. *
+137100*                        *  *  *  *                           *
+137200* OPTION (2)                                                  *
+137300*       (2)  MOVE 'M' TO PRICER-OPTION-SW.                    *
+137400*            CALL 'PPOPN___' USING BILL-DATA                  *
+137500*                                  PPS-DATA                   *
+137600*                                  PRICER-OPT-VERS-SW         *
+137700*                                  PPS-ADDITIONAL-VARIABLES   *
+137800*                                  PPHOLDAR-HOLD-AREA.        *
+137900*        THIS PASSES THE STANDARD VARIIABLES AND THE          *
+138000*      ADDITIONAL VARIABLES USED FOR PRICING.                 *
+138100*                        *  *  *  *                           *
+138200* OPTION (3)                                                  *
+138300*       (3)  MOVE 'P' TO PRICER-OPTION-SW.                    *
+138400*            CALL 'PPOPN___' USING BILL-DATA                  *
+138500*                                  PPS-DATA                   *
+138600*                                  PRICER-OPT-VERS-SW         *
+138700*                                  PPS-ADDITIONAL-VARIABLES   *
+138800*                                  PROV-RECORD-FROM-USER.     *
+138900*        THIS PASSES THE STANDARD VARIABLES                   *
+139000*       AND ADDITIONAL VARIABLES USED FOR PRICING.            *
+139100*        THE PROVIDER RECORD FROM THE USER                    *
+139200*       USED FOR THIS BILL ONLY IS ALSO PASSED.               *
+139300*                        *  *  *  *                           *
+139400* OPTION (4)                                                  *
+139500*       (4)  MOVE 'A' TO PRICER-OPTION-SW.                    *
+139600*            CALL 'PPOPN___' USING BILL-DATA                  *
+139700*                                  PPS-DATA                   *
+139800*                                  PRICER-OPT-VERS-SW         *
+139900*                                  PPS-ADDITIONAL-VARIABLES   *
+140000*                                  PROV-RECORD-FROM-USER      *
+140100*                                  MSAX-TABLE-FROM-USER.      *
+140200*        THIS IS THE ONLINE COMPATIBLE INTERFACE.             *
+140300*        THIS PASSES THE STANDARD VARIIABLES AND THE          *
+140400*      ADDITIONAL VARIABLES USED FOR PRICING.                 *
+140500*        THE PROVIDER RECORD AND THE WAGE INDEX TABLE FROM    *
+140600*      THE USERS ARE PASSED.                                  *
+140700***************************************************************
+140800
+140900*** OPTION (1)
+141000*    MOVE ' ' TO PRICER-OPTION-SW.
+141100*    CALL  PPOPN074   USING BILL-DATA
+141200*                           PPS-DATA
+141300*                           PRICER-OPT-VERS-SW.
+141400*** OPTION (2)
+141500     MOVE 'M' TO PRICER-OPTION-SW.
+141600     CALL  PPOPN215   USING BILL-DATA
+141700                            PPS-DATA
+141800                            PRICER-OPT-VERS-SW
+141900                            PPS-ADDITIONAL-VARIABLES
+142000                            PPHOLDAR-HOLD-AREA.
+142100*** OPTION (3)
+142200*    MOVE 'P' TO PRICER-OPTION-SW.
+142300*    CALL  PPOPN074   USING BILL-DATA
+142400*                           PPS-DATA
+142500*                           PRICER-OPT-VERS-SW
+142600*                           PPS-ADDITIONAL-VARIABLES
+142700*                           PROV-RECORD-FROM-USER.
+142800*** OPTION (4)
+142900*    MOVE 'A' TO PRICER-OPTION-SW.
+143000*    CALL  PPOPN074   USING BILL-DATA
+143100*                           PPS-DATA
+143200*                           PRICER-OPT-VERS-SW
+143300*                           PPS-ADDITIONAL-VARIABLES
+143400*                           PROV-RECORD-FROM-USER
+143500*                           MSAX-TABLE-FROM-USER
+143600*                           CBSA-TABLE-FROM-USER.
+143700
+143800 1000-EXIT.  EXIT.
+143900
+144000 1100-WRITE-SYSUT2.
+144100******************************************************************
+144200*    PRINT OPERATING PROSPECTIVE PAYMENT TEST DATA DETAIL
+144300*    REPORT AND WRITE TEST PAYMENT RECORD ROUTINE
+144400******************************************************************
+144500     IF  OPERLINE-CTR > 54
+144600         PERFORM 1200-PPS-HEADINGS THRU 1200-EXIT.
+144700     MOVE SPACES            TO  PPS-DETAIL-LINE-OPER.
+144800     MOVE BILL-HI-CLAIM-NO  TO  PRT-HIC.
+144900     MOVE B-PROVIDER-NO     TO  PRT-PROV.
+145000     MOVE PPS-WAGE-INDX     TO  PRT-WAGE-INDX.
+145100     MOVE B-DRG             TO  PRT-GRP-DRG.
+145200     MOVE PPS-AVG-LOS       TO  PRT-ALOS.
+145300     MOVE PPS-DAYS-CUTOFF   TO  PRT-DAY-CUT.
+145400     MOVE B-DISCHARGE-DATE  TO  PRT-DISCHG-DATE.
+145500***  MOVE B-DISCHG-MM       TO  PRT-DISCHG-MM.
+145600**   MOVE B-DISCHG-DD       TO  PRT-DISCHG-DD.
+145700**   MOVE '/'               TO  PRT-SLASH1.
+145800**   MOVE '/'               TO  PRT-SLASH2.
+145900
+146000
+146100     MOVE PPS-TOTAL-PAYMENT TO  PRT-TOT-PAY.
+146200     MOVE PPS-OPER-FSP-PART TO  PRT-FSP-PART.
+146300     MOVE PPS-OPER-HSP-PART TO  PRT-HSP-PART.
+146400     MOVE PPS-OPER-OUTLIER-PART TO PRT-OUTLIER-PART.
+146500     MOVE PPS-OPER-DSH-ADJ  TO  PRT-DSH-ADJ.
+146600     MOVE PPS-OPER-IME-ADJ  TO  PRT-INDTCH-ADJ.
+146700     MOVE PPS-REG-DAYS-USED TO  PRT-LOS.
+146800     MOVE PPS-OUTLIER-DAYS  TO  PRT-OUTLIER-DAYS.
+146900     MOVE B-REVIEW-CODE     TO  PRT-REV-CODE.
+147000     MOVE PPS-RTC           TO  PRT-PPS-RTC.
+147100
+147200     WRITE PRTOPER-LINE FROM PPS-DETAIL-LINE-OPER
+147300                             AFTER ADVANCING 1.
+147400     IF OPR-STAT1 > 0 DISPLAY ' BAD4 WRITE ON PRTOPER FILE'.
+147500     ADD 1 TO OPERLINE-CTR.
+147600
+147700        WRITE OUT-REC FROM BILL-WORK.
+147800
+147900     IF UT2-STAT1 > 0 DISPLAY ' BAD1 WRITE ON PPSOUT  FILE'.
+148000     ADD 1 TO PPSOUT-CTR.
+148100
+148200**************************************************************
+148300**************************************************************
+148400**************************************************************
+148500******************************************************************
+148600*         PRINT CAPIITAL PROSPECTIVE PAYMENT
+148700*              TEST DATA DETAIL REPORT
+148800******************************************************************
+148900     IF  CAPILINE-CTR > 55
+149000         PERFORM 1250-PPS-HEADINGS-CAPI THRU 1250-EXIT.
+149100
+149200     MOVE SPACES              TO PPS-DETAIL-LINE-CAPI.
+149300     MOVE 0                   TO PRT-CAPI-TOT-PAY
+149400                                 PRT-CAPI-HSP
+149500                                 PRT-CAPI-FSP
+149600                                 PRT-CAPI-OUTLIER
+149700                                 PRT-CAPI-OLD-HARM
+149800                                 PRT-CAPI-DSH-ADJ
+149900                                 PRT-CAPI-IME-ADJ
+150000                                 PRT-CAPI-EXCEPTIONS.
+150100     MOVE BILL-HI-CLAIM-NO    TO PRT-CAPI-HIC.
+150200     MOVE BILL-PROVIDER-NO    TO PRT-CAPI-PROV.
+150300     MOVE PPS-CAPI-TOTAL-PAY  TO PRT-CAPI-TOT-PAY.
+150400     MOVE PPS-CAPI-HSP        TO PRT-CAPI-HSP.
+150500     MOVE PPS-CAPI-FSP        TO PRT-CAPI-FSP.
+150600     MOVE PPS-CAPI-OUTLIER    TO PRT-CAPI-OUTLIER.
+150700     MOVE PPS-CAPI-OLD-HARM   TO PRT-CAPI-OLD-HARM.
+150800     MOVE PPS-CAPI-DSH-ADJ    TO PRT-CAPI-DSH-ADJ.
+150900     MOVE PPS-CAPI-IME-ADJ    TO PRT-CAPI-IME-ADJ.
+151000     MOVE PPS-CAPI-EXCEPTIONS TO PRT-CAPI-EXCEPTIONS.
+151100
+151200     WRITE PRTCAPI-LINE FROM PPS-DETAIL-LINE-CAPI
+151300                            AFTER ADVANCING 1.
+151400     IF CAP-STAT1 > 0 DISPLAY ' BAD1 WRITE ON PRTCAPI FILE'.
+151500     ADD 1 TO CAPILINE-CTR.
+151600 1100-EXIT.  EXIT.
+151700
+151800 1200-PPS-HEADINGS.
+151900     WRITE PRTOPER-LINE FROM PPS-HEAD1
+152000                             AFTER ADVANCING PAGE.
+152100     IF OPR-STAT1 > 0 DISPLAY ' BAD5 WRITE ON PRTOPER FILE'.
+152200     WRITE PRTOPER-LINE FROM PPS-HEAD2-OPER
+152300                             AFTER ADVANCING 1.
+152400     IF OPR-STAT1 > 0 DISPLAY ' BAD6 WRITE ON PRTOPER FILE'.
+152500     WRITE PRTOPER-LINE FROM PPS-HEAD3-OPER
+152600                             AFTER ADVANCING 2.
+152700     IF OPR-STAT1 > 0 DISPLAY ' BAD7 WRITE ON PRTOPER FILE'.
+152800     WRITE PRTOPER-LINE FROM PPS-HEAD4-OPER
+152900                             AFTER ADVANCING 1.
+153000     IF OPR-STAT1 > 0 DISPLAY ' BAD8 WRITE ON PRTOPER FILE'.
+153100     MOVE ALL '  -' TO PRTOPER-LINE.
+153200     WRITE PRTOPER-LINE AFTER ADVANCING 1.
+153300     IF OPR-STAT1 > 0 DISPLAY ' BAD9 WRITE ON PRTOPER FILE'.
+153400     MOVE 5 TO OPERLINE-CTR.
+153500
+153600 1200-EXIT.  EXIT.
+153700
+153800 1250-PPS-HEADINGS-CAPI.
+153900     WRITE PRTCAPI-LINE FROM PPS-HEAD1 AFTER ADVANCING PAGE.
+154000     IF CAP-STAT1 > 0 DISPLAY ' BAD2 WRITE ON PRTCAPI FILE'.
+154100     WRITE PRTCAPI-LINE FROM PPS-HEAD2-CAPI AFTER ADVANCING 1.
+154200     IF CAP-STAT1 > 0 DISPLAY ' BAD3 WRITE ON PRTCAPI FILE'.
+154300     WRITE PRTCAPI-LINE FROM PPS-HEAD3-CAPI AFTER ADVANCING 2.
+154400     IF CAP-STAT1 > 0 DISPLAY ' BAD4 WRITE ON PRTCAPI FILE'.
+154500     MOVE ALL '  -' TO PRTCAPI-LINE.
+154600     WRITE PRTCAPI-LINE AFTER ADVANCING 1.
+154700     IF CAP-STAT1 > 0 DISPLAY ' BAD5 WRITE ON PRTCAPI FILE'.
+154800     MOVE 5 TO CAPILINE-CTR.
+154900
+155000 1250-EXIT.  EXIT.
+155100
+155200*****        LAST STATEMENT               *************

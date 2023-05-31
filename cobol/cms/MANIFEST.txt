@@ -1,0 +1,85 @@
+************************************************************************
+*                                                                      *
+*                           MANIFEST LIST                              *
+*                                                                      *
+* PDS NAME:              MU00.@BFN2699.INNDM215                        *
+* PRICER:                INPATIENT PROSPECTIVE PAYMENT SYSTEM (IPPS)   *
+* VERSION:               2021.5                                        *
+* TO BE USED W/ RELEASE: 2021.4 PRODUCTION RELEASE                     *
+* BETA/PRODUCTION:       PRODUCTION                                    *
+* PRICER RELEASE DATE:    02/19/2021                                   *
+* PRICER EFFECTIVE DATE:  10/01/2020                                   *
+*                                                                      *
+* TOTAL NUMBER OF MEMBERS ASSOCIATED WITH THIS PRICER: 48              *
+*                                                                      *
+*     - NUMBER OF MEMBERS INCLUDED IN THIS DATASET: 4                  *
+*       - NEW MEMBERS: 0                                               *
+*         (LISTED BELOW UNDER "NON-PAIRED NEW FILE MEMBERS")           *
+*       - MEMBERS THAT REPLACE THE PREVIOUS VERSION: 2                 *
+*         (LISTED BELOW WITH "**" IN THE "CHNG" COLUMN)                *
+*       - MEMBERS WITH CHANGES: 2                                      *
+*         (LISTED BELOW WITH "**" IN THE "CHNG" COLUMN)                *
+*                                                                      *
+*     - NUMBER OF MEMBERS NOT INCLUDED IN THIS DATASET: 44             *
+*       - MEMBERS WITH NO CHANGES: 44                                  *
+*         (LISTED BELOW WITH NOTHING IN THE "CHNG" COLUMN)             *
+*                                                                      *
+************************************************************************
+
+                       MEMBER SUMMARY LISTING (LINE COMPARE)
+
+ CHNG MEMBERS-COMPARED NEW-PROC OLD-PROC  MATCHED NEW-INS OLD-DEL REFM-LN N-DP-L
+                           ****     ****     ****     ***       *
+      CBSA212
+      DRGSX211
+      HOUTI212
+ **   MANIFEST
+      MIDNIGHT
+      MSAX045
+      NTECH211
+      PPCAL006
+      PPCAL017
+      PPCAL026
+      PPCAL038
+      PPCAL04D
+      PPCAL059
+      PPCAL069
+      PPCAL07B
+      PPCAL08D
+      PPCAL09D
+      PPCAL10O
+      PPCAL10P
+      PPCAL119
+      PPCAL125
+      PPCAL135
+      PPCAL14B
+      PPCAL156
+      PPCAL163
+      PPCAL171
+      PPCAL182
+      PPCAL192
+      PPCAL204             ****     ****     ****    ****    ****
+ **   PPCAL215:PPCAL214    3328     3327     3324       4       3
+      PPCAL884
+      PPCAL894
+      PPCAL905
+      PPCAL915
+      PPCAL926
+      PPCAL935
+      PPCAL944
+      PPCAL954
+      PPCAL964
+      PPCAL974
+      PPCAL987
+      PPCAL998             ****     ****     ****    ****    ****
+ **   PPDRV215:PPDRV214    6209     6209     6204       5       5
+      PPHOLDAR
+      PREV200
+      RATEX213
+ **   README
+      RUFL200
+
+    NON-PAIRED NEW FILE MEMBERS         |   NON-PAIRED OLD FILE MEMBERS
+
+                                        |
+
