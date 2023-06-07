@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "ms-python.python", // Python extension
+        "IBM.zopeneditor",
+        "zowe.vscode-extension-for-zowe",
+        "mgmcdermott.vscode-language-babel"       
+    ]
+}
